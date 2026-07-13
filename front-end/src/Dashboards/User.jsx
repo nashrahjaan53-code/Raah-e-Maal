@@ -11,7 +11,7 @@ import {
   AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell 
 } from 'recharts';
-import { deleteSavedStrategy, getSavedStrategies } from '../services/savedStrategy';
+import { getSavedStrategies } from '../services/savedStrategy';
 import { useLocation } from 'react-router-dom';
 
 // --- TRANSLATION SYSTEM FOR KASHMIR ---
@@ -254,7 +254,7 @@ const User = ({ onLogout }) => {
     ];
   });
 
-  const [localPayments, setLocalPayments] = useState([
+  const [localPayments] = useState([
     { id: 1, date: '2026-09-15', amount: 3500, loanType: 'J&K Bank KCC', status: 'Completed' },
     { id: 2, date: '2026-08-10', amount: 4500, loanType: 'JK Cooperative Loan', status: 'Completed' },
     { id: 3, date: '2026-10-15', amount: 3500, loanType: 'J&K Bank KCC', status: 'Upcoming' },
@@ -277,7 +277,7 @@ const User = ({ onLogout }) => {
       setActiveSection(location.state.activeSection);
     }
   }, [location.state]);
-  const [savedStrategies, setSavedStrategies] = useState(initialSavedStrategies);
+  const [savedStrategies] = useState(initialSavedStrategies);
   const isDark = theme === 'dark';
   const savedStrategy = savedStrategies[0] || null;
 
@@ -320,7 +320,7 @@ const User = ({ onLogout }) => {
   const askVoiceGuide = (question) => {
     if (!question || !question.trim()) return;
 
-    const userMsg = { id: Date.now(), sender: 'User', text: question };
+    const userMsg = { id: chatHistory.length + 10, sender: 'User', text: question };
     let responseText = "";
     const q = question.toLowerCase();
     const activeDebt = localLoans.reduce((sum, l) => sum + (l.status === 'Active' ? l.amount : 0), 0);
@@ -342,7 +342,7 @@ const User = ({ onLogout }) => {
       responseText = `Assalamu Alaikum! As your financial assistant, I recommend scheduling flexible EMIs, utilizing government interest subventions (like KCC at 4%), and maintaining a winter reserve buffer of ${formatCurrency(winterTarget)} for the lean season.`;
     }
 
-    const aiMsg = { id: Date.now() + 1, sender: 'AI', text: responseText };
+    const aiMsg = { id: chatHistory.length + 11, sender: 'AI', text: responseText };
     setChatHistory(prev => [...prev, userMsg, aiMsg]);
     setVoiceGuideText(question);
     
@@ -541,51 +541,8 @@ const User = ({ onLogout }) => {
 
   const mixData = getMixData();
 
-  // Helper to contribute to savings goals
-  const handleContributeGoal = (e) => {
-    e.preventDefault();
-    const amt = parseFloat(goalContribution);
-    if (isNaN(amt) || amt <= 0) return;
-
-    setSavingsGoals(prev => prev.map(g => {
-      if (g.id === selectedGoalId) {
-        return { ...g, current: Math.min(g.target, g.current + amt) };
-      }
-      return g;
-    }));
-
-    setGoalContribution('');
-
-    // Add alert
-    const targetGoal = savingsGoals.find(g => g.id === selectedGoalId);
-    const newN = {
-      id: Date.now(),
-      type: 'Goal Planner',
-      message: `Contributed ${formatCurrency(amt)} to savings goal: "${targetGoal.name}". Keep it up!`,
-      date: new Date().toISOString().split('T')[0],
-      read: false
-    };
-    setLocalNotifications(prev => [newN, ...prev]);
-  };
-
   // AI Financial Voice Guide trigger
-  const triggerVoiceGuideQuestion = (questionType) => {
-    let answer = "";
-    if (questionType === 'afford') {
-      const activeTotal = localLoans.reduce((sum, l) => sum + (l.status === 'Active' ? l.amount : 0), 0);
-      if (activeTotal > 200000) {
-        answer = `With your current outstanding liabilities of ${formatCurrency(activeTotal)}, you should hold off on taking additional credit. Focus on your flexible EMI harvest payoff plan first.`;
-      } else {
-        answer = `Yes. Your total active debt load is ${formatCurrency(activeTotal)}, which is healthy. You can afford a micro-loan for seasonal inputs, preferably under the subsidized KCC scheme.`;
-      }
-    } else if (questionType === 'winter') {
-      const winterReserveTarget = (winterExpenses + winterEmis) * winterMonths + kangriBuffer;
-      answer = `For this winter in ${district} District, you should target a preparedness fund of ${formatCurrency(winterReserveTarget)}. This covers ${winterMonths} months of lean winter expenses, EMIs, and a special heating buffer.`;
-    }
 
-    setVoiceGuideText(answer);
-    speakText(answer);
-  };
 
   const getSeasonalPlannerData = () => {
     const months = [
@@ -639,14 +596,7 @@ const User = ({ onLogout }) => {
     setSelectedLoan((currentLoan) => (currentLoan?.id === loan.id ? null : loan));
   };
 
-  const handleDeleteStrategy = (strategy) => {
-    const nextStrategies = deleteSavedStrategy(strategy);
-    setSavedStrategies(nextStrategies);
 
-    if (nextStrategies.length === 0 && activeSection === 'strategies') {
-      setActiveSection('portfolio');
-    }
-  };
 
   const formatCurrency = (amount) => `₹${Number(amount).toLocaleString('en-IN')}`;
 
